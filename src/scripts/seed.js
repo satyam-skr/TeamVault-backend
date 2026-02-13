@@ -1,5 +1,5 @@
 import {prisma} from '../config/prisma.ts'
-import { hashPassword } from '../utils/password.utils.js';
+import { hashPassword } from '../utils/password.util.js';
 
 
 async function main() {
