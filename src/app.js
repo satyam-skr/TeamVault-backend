@@ -2,10 +2,17 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from "cookie-parser";
 import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
+import YAML from 'yamljs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { errorHandler, notFound } from './middlewares/error.middleware.js';
 import { apiLimiter } from './middlewares/rateLimit.middleware.js';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 
@@ -24,6 +31,14 @@ app.use(cookieParser());
 
 app.use('/api/', apiLimiter);
 
+// Swagger Documentation
+const swaggerDocument = YAML.load(join(__dirname, '../docs/openapi.yaml'));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'TeamVault API Documentation',
+  customfavIcon: '/favicon.ico'
+}));
+
 // Importing Routes
 import healthRoute from "./routes/health.route.js";
 import authRoute from "./routes/auth.route.js";
@@ -40,9 +55,16 @@ app.use("/api/v1/users", userRoute);
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'Welcome to TaskVault API',
+    message: 'Welcome to TeamVault API',
     version: '1.0.0',
-    // documentation: '/api-docs'
+    documentation: '/api-docs',
+    endpoints: {
+      swagger: '/api-docs',
+      health: '/api/v1/health',
+      auth: '/api/v1/auth',
+      tasks: '/api/v1/tasks',
+      users: '/api/v1/users'
+    }
   });
 });
 

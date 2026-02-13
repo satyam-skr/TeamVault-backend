@@ -6,14 +6,21 @@ import { prisma } from '../config/prisma.js';
 
 export const authenticate = asyncHandler(async (req, res, next) => {
     try {
-        const authHeader = req.headers.authorization || req.headers.Authorization
-            || req.cookies?.accessToken;
+        // Try to get token from Authorization header first
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+        let token = null;
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            throw new ApiError(401, 'Access token is required');
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            // Extract token from Bearer header
+            token = authHeader.substring(7);
+        } else if (req.cookies?.accessToken) {
+            // Fall back to cookie if no Bearer header
+            token = req.cookies.accessToken;
         }
 
-        const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+        if (!token) {
+            throw new ApiError(401, 'Access token is required');
+        }
 
         const decoded = verifyAccessToken(token);
 
