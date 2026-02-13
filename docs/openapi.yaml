@@ -1,0 +1,1193 @@
+openapi: 3.0.3
+info:
+  title: TeamVault API
+  description: |
+    Production-grade Task Management API with JWT authentication, role-based access control, and comprehensive validation.
+    
+    **Features:**
+    - JWT-based authentication with refresh tokens
+    - Role-based authorization (USER, ADMIN)
+    - Task CRUD operations
+    - User management (Admin only)
+    - Rate limiting
+    - Request validation with Zod
+    
+    **Base URL:** http://localhost:4000
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@teamvault.com
+
+servers:
+  - url: http://localhost:4000
+    description: Development server
+  - url: https://api.teamvault.com
+    description: Production server
+
+tags:
+  - name: Auth
+    description: Authentication and authorization endpoints
+  - name: Tasks
+    description: Task management operations (requires authentication)
+  - name: Users
+    description: User management operations (requires admin role)
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Enter your access token (without 'Bearer' prefix)
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        role:
+          type: string
+          enum: [USER, ADMIN]
+          example: "USER"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-02-13T10:30:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-02-13T10:30:00.000Z"
+      required:
+        - id
+        - name
+        - email
+        - role
+        - createdAt
+        - updatedAt
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+        title:
+          type: string
+          minLength: 3
+          maxLength: 200
+          example: "Complete API documentation"
+        description:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          example: "Create comprehensive OpenAPI spec and Swagger UI for all endpoints"
+        status:
+          type: string
+          enum: [TODO, IN_PROGRESS, DONE]
+          example: "IN_PROGRESS"
+        userId:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-02-13T10:30:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-02-13T10:30:00.000Z"
+      required:
+        - id
+        - title
+        - description
+        - status
+        - userId
+        - createdAt
+        - updatedAt
+
+    RegisterRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        password:
+          type: string
+          minLength: 6
+          maxLength: 100
+          example: "securePassword123"
+        role:
+          type: string
+          enum: [USER, ADMIN]
+          default: USER
+          example: "USER"
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        password:
+          type: string
+          example: "securePassword123"
+
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - title
+        - description
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 200
+          example: "Complete API documentation"
+        description:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          example: "Create comprehensive OpenAPI spec and Swagger UI for all endpoints"
+        status:
+          type: string
+          enum: [TODO, IN_PROGRESS, DONE]
+          default: TODO
+          example: "TODO"
+
+    UpdateTaskRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 200
+          example: "Complete API documentation"
+        description:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          example: "Create comprehensive OpenAPI spec and Swagger UI for all endpoints"
+        status:
+          type: string
+          enum: [TODO, IN_PROGRESS, DONE]
+          example: "DONE"
+
+    AuthResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+            accessToken:
+              type: string
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            refreshToken:
+              type: string
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        message:
+          type: string
+          example: "User registered successfully"
+        success:
+          type: boolean
+          example: true
+
+    TokenResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            refreshToken:
+              type: string
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        message:
+          type: string
+          example: "Token refreshed successfully"
+        success:
+          type: boolean
+          example: true
+
+    UserResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/User'
+        message:
+          type: string
+          example: "User profile fetched successfully"
+        success:
+          type: boolean
+          example: true
+
+    TaskResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Task'
+        message:
+          type: string
+          example: "Task created successfully"
+        success:
+          type: boolean
+          example: true
+
+    TaskListResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        message:
+          type: string
+          example: "Tasks fetched successfully"
+        success:
+          type: boolean
+          example: true
+
+    UserListResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        message:
+          type: string
+          example: "Users fetched successfully"
+        success:
+          type: boolean
+          example: true
+
+    TaskStatsResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: object
+          properties:
+            total:
+              type: integer
+              example: 10
+            todo:
+              type: integer
+              example: 3
+            inProgress:
+              type: integer
+              example: 5
+            done:
+              type: integer
+              example: 2
+        message:
+          type: string
+          example: "Task statistics fetched successfully"
+        success:
+          type: boolean
+          example: true
+
+    UserStatsResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: object
+          properties:
+            totalUsers:
+              type: integer
+              example: 100
+            adminCount:
+              type: integer
+              example: 5
+            userCount:
+              type: integer
+              example: 95
+        message:
+          type: string
+          example: "User statistics fetched successfully"
+        success:
+          type: boolean
+          example: true
+
+    SuccessResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          type: object
+          nullable: true
+        message:
+          type: string
+          example: "Operation completed successfully"
+        success:
+          type: boolean
+          example: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "An error occurred"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: "email"
+              message:
+                type: string
+                example: "Please provide a valid email address"
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Validation failed"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: "email"
+              message:
+                type: string
+                example: "Please provide a valid email address"
+
+paths:
+  /api/v1/auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register a new user
+      description: Create a new user account with email and password. Default role is USER.
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              user:
+                summary: Register as USER
+                value:
+                  name: "John Doe"
+                  email: "john.doe@example.com"
+                  password: "securePassword123"
+              admin:
+                summary: Register as ADMIN
+                value:
+                  name: "Admin User"
+                  email: "admin@example.com"
+                  password: "adminPassword123"
+                  role: "ADMIN"
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              example:
+                statusCode: 201
+                data:
+                  user:
+                    id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    name: "John Doe"
+                    email: "john.doe@example.com"
+                    role: "USER"
+                    createdAt: "2026-02-13T10:30:00.000Z"
+                    updatedAt: "2026-02-13T10:30:00.000Z"
+                  accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                message: "User registered successfully"
+                success: true
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+              example:
+                success: false
+                message: "Validation failed"
+                errors:
+                  - field: "email"
+                    message: "Please provide a valid email address"
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "User with this email already exists"
+                errors: []
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login user
+      description: Authenticate user with email and password. Returns access and refresh tokens.
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: "john.doe@example.com"
+              password: "securePassword123"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              example:
+                statusCode: 200
+                data:
+                  user:
+                    id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    name: "John Doe"
+                    email: "john.doe@example.com"
+                    role: "USER"
+                    createdAt: "2026-02-13T10:30:00.000Z"
+                    updatedAt: "2026-02-13T10:30:00.000Z"
+                  accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                message: "User logged in successfully"
+                success: true
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Invalid email or password"
+                errors: []
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/refresh-token:
+    post:
+      tags:
+        - Auth
+      summary: Refresh access token
+      description: Generate new access and refresh tokens using a valid refresh token.
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+            example:
+              refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+              example:
+                statusCode: 200
+                data:
+                  accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                message: "Token refreshed successfully"
+                success: true
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Invalid or expired refresh token"
+                errors: []
+
+  /api/v1/auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Get current user
+      description: Retrieve the profile of the currently authenticated user.
+      operationId: getCurrentUser
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              example:
+                statusCode: 200
+                data:
+                  id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                  name: "John Doe"
+                  email: "john.doe@example.com"
+                  role: "USER"
+                  createdAt: "2026-02-13T10:30:00.000Z"
+                  updatedAt: "2026-02-13T10:30:00.000Z"
+                message: "User profile fetched successfully"
+                success: true
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Access token is required"
+                errors: []
+
+  /api/v1/auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: Logout user
+      description: Invalidate the user's refresh token and logout.
+      operationId: logoutUser
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                statusCode: 200
+                data: null
+                message: "User logged out successfully"
+                success: true
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/tasks:
+    post:
+      tags:
+        - Tasks
+      summary: Create a new task
+      description: Create a new task for the authenticated user.
+      operationId: createTask
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+            example:
+              title: "Complete API documentation"
+              description: "Create comprehensive OpenAPI spec and Swagger UI for all endpoints"
+              status: "TODO"
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+              example:
+                statusCode: 201
+                data:
+                  id: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+                  title: "Complete API documentation"
+                  description: "Create comprehensive OpenAPI spec and Swagger UI for all endpoints"
+                  status: "TODO"
+                  userId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                  createdAt: "2026-02-13T10:30:00.000Z"
+                  updatedAt: "2026-02-13T10:30:00.000Z"
+                message: "Task created successfully"
+                success: true
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - Tasks
+      summary: Get all tasks
+      description: Retrieve all tasks for the authenticated user.
+      operationId: getMyTasks
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tasks fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+              example:
+                statusCode: 200
+                data:
+                  - id: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+                    title: "Complete API documentation"
+                    description: "Create comprehensive OpenAPI spec and Swagger UI"
+                    status: "IN_PROGRESS"
+                    userId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    createdAt: "2026-02-13T10:30:00.000Z"
+                    updatedAt: "2026-02-13T11:00:00.000Z"
+                  - id: "c3d4e5f6-a7b8-9012-cdef-123456789012"
+                    title: "Write unit tests"
+                    description: "Add comprehensive test coverage for all endpoints"
+                    status: "TODO"
+                    userId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    createdAt: "2026-02-13T10:35:00.000Z"
+                    updatedAt: "2026-02-13T10:35:00.000Z"
+                message: "Tasks fetched successfully"
+                success: true
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/tasks/stats:
+    get:
+      tags:
+        - Tasks
+      summary: Get task statistics
+      description: Retrieve task statistics for the authenticated user (total, todo, in progress, done).
+      operationId: getTaskStats
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Task statistics fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskStatsResponse'
+              example:
+                statusCode: 200
+                data:
+                  total: 10
+                  todo: 3
+                  inProgress: 5
+                  done: 2
+                message: "Task statistics fetched successfully"
+                success: true
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/tasks/{id}:
+    get:
+      tags:
+        - Tasks
+      summary: Get task by ID
+      description: Retrieve a specific task by ID (must belong to the authenticated user).
+      operationId: getTaskById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Task ID (UUID)
+          schema:
+            type: string
+            format: uuid
+          example: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+      responses:
+        '200':
+          description: Task fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+              example:
+                statusCode: 200
+                data:
+                  id: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+                  title: "Complete API documentation"
+                  description: "Create comprehensive OpenAPI spec and Swagger UI"
+                  status: "IN_PROGRESS"
+                  userId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                  createdAt: "2026-02-13T10:30:00.000Z"
+                  updatedAt: "2026-02-13T11:00:00.000Z"
+                message: "Task fetched successfully"
+                success: true
+        '400':
+          description: Invalid UUID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Task not found"
+                errors: []
+
+    patch:
+      tags:
+        - Tasks
+      summary: Update task
+      description: Update one or more fields of a task. At least one field is required.
+      operationId: updateTask
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Task ID (UUID)
+          schema:
+            type: string
+            format: uuid
+          example: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+            examples:
+              updateStatus:
+                summary: Update status only
+                value:
+                  status: "DONE"
+              updateTitleAndDescription:
+                summary: Update title and description
+                value:
+                  title: "Complete API documentation v2"
+                  description: "Create comprehensive OpenAPI spec, Swagger UI, and Postman collection"
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+              example:
+                statusCode: 200
+                data:
+                  id: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+                  title: "Complete API documentation"
+                  description: "Create comprehensive OpenAPI spec and Swagger UI"
+                  status: "DONE"
+                  userId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                  createdAt: "2026-02-13T10:30:00.000Z"
+                  updatedAt: "2026-02-13T12:00:00.000Z"
+                message: "Task updated successfully"
+                success: true
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Tasks
+      summary: Delete task
+      description: Delete a task by ID (must belong to the authenticated user).
+      operationId: deleteTask
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Task ID (UUID)
+          schema:
+            type: string
+            format: uuid
+          example: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+      responses:
+        '200':
+          description: Task deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                statusCode: 200
+                data: null
+                message: "Task deleted successfully"
+                success: true
+        '400':
+          description: Invalid UUID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/users:
+    get:
+      tags:
+        - Users
+      summary: Get all users (Admin only)
+      description: Retrieve a list of all users. Requires ADMIN role.
+      operationId: getAllUsers
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Users fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+              example:
+                statusCode: 200
+                data:
+                  - id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    name: "John Doe"
+                    email: "john.doe@example.com"
+                    role: "USER"
+                    createdAt: "2026-02-13T10:30:00.000Z"
+                    updatedAt: "2026-02-13T10:30:00.000Z"
+                  - id: "d4e5f6a7-b8c9-0123-def1-234567890123"
+                    name: "Admin User"
+                    email: "admin@example.com"
+                    role: "ADMIN"
+                    createdAt: "2026-02-13T09:00:00.000Z"
+                    updatedAt: "2026-02-13T09:00:00.000Z"
+                message: "Users fetched successfully"
+                success: true
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Requires ADMIN role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: "Access denied. Requires ADMIN role"
+                errors: []
+
+  /api/v1/users/stats:
+    get:
+      tags:
+        - Users
+      summary: Get user statistics (Admin only)
+      description: Retrieve user statistics including total users, admin count, and regular user count. Requires ADMIN role.
+      operationId: getUserStats
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User statistics fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserStatsResponse'
+              example:
+                statusCode: 200
+                data:
+                  totalUsers: 100
+                  adminCount: 5
+                  userCount: 95
+                message: "User statistics fetched successfully"
+                success: true
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Requires ADMIN role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Get user by ID (Admin only)
+      description: Retrieve a specific user by ID. Requires ADMIN role.
+      operationId: getUserById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID (UUID)
+          schema:
+            type: string
+            format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      responses:
+        '200':
+          description: User fetched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              example:
+                statusCode: 200
+                data:
+                  id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                  name: "John Doe"
+                  email: "john.doe@example.com"
+                  role: "USER"
+                  createdAt: "2026-02-13T10:30:00.000Z"
+                  updatedAt: "2026-02-13T10:30:00.000Z"
+                message: "User fetched successfully"
+                success: true
+        '400':
+          description: Invalid UUID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Requires ADMIN role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Users
+      summary: Delete user (Admin only)
+      description: Delete a user by ID. Requires ADMIN role.
+      operationId: deleteUser
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID (UUID)
+          schema:
+            type: string
+            format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                statusCode: 200
+                data: null
+                message: "User deleted successfully"
+                success: true
+        '400':
+          description: Invalid UUID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Requires ADMIN role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
